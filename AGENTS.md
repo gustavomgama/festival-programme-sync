@@ -142,3 +142,7 @@ Reference model ~9 tables (organisations, venues, events, sessions, people, user
 - Manual: gen1 fail_after=8 → nothing lost.
 - Filter: date, venue, q all work and update frame only.
 - Inspect logs/N+1 with eager loading.
+
+### Before submitting
+- Rename README.md to INSTRUCTIONS.MD
+- Create README.md with contents of how to run the project and relevant information
