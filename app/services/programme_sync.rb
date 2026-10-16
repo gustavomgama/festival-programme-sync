@@ -41,6 +41,8 @@ class ProgrammeSync
       error_details: "[]"
     )
 
+    Rails.logger.info("programme_sync.started sync_run_id=#{@sync_run.id} generation=#{@generation} base_url=#{@base_url}")
+
     counters = {
       fetched: 0,
       created: 0,
@@ -64,13 +66,23 @@ class ProgrammeSync
 
         unless response.success?
           errors << "API returned HTTP #{response.status} on page #{page}"
-          stop = true
+          Rails.logger.warn("programme_sync.api_failure sync_run_id=#{@sync_run.id} page=#{page} status=#{response.status}")
           break
         end
 
         payload = JSON.parse(response.body)
+
+        unless payload.is_a?(Hash)
+          errors << "API response on page #{page} was not a JSON object"
+          break
+        end
+
+        unless (screenings = payload.fetch("screenings", [])).is_a?(Array)
+          errors << "API screenings payload on page #{page} was not an array"
+          break
+        end
+
         total_pages = [payload.fetch("total_pages", 1).to_i, 1].max
-        screenings = payload.fetch("screenings", [])
 
         screenings.each do |record|
           counters[:fetched] += 1
@@ -86,7 +98,8 @@ class ProgrammeSync
             counters[:screenings_updated] += counts[:screening_updated] ? 1 : 0
           rescue => e
             counters[:failed] += 1
-            errors << "screening #{record['id']}: #{e.class}: #{e.message}"
+            errors << "screening #{record.is_a?(Hash) ? record['id'] : record.inspect}: #{e.class}: #{e.message}"
+            Rails.logger.warn("programme_sync.record_failed sync_run_id=#{@sync_run.id} screening=#{record.is_a?(Hash) ? record['id'] : record.inspect} error=#{e.class}: #{e.message}")
           end
         end
 
@@ -103,6 +116,8 @@ class ProgrammeSync
       # intact because each page was committed as it arrived.
       errors << "#{e.class}: #{e.message}"
     end
+
+    Rails.logger.info("programme_sync.finished sync_run_id=#{@sync_run.id} status=#{errors.empty? ? "success" : (counters[:fetched].positive? ? "partial_failure" : "failed")} fetched=#{counters[:fetched]} created=#{counters[:created]} updated=#{counters[:updated]} failed=#{counters[:failed]}")
 
     status =
       if errors.empty?
