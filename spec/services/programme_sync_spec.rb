@@ -42,7 +42,7 @@ RSpec.describe ProgrammeSync do
 
     expect(result.status).to eq("partial_failure")
     expect(result.fetched).to eq(8)
-    expect(result.failed).to be >= 1
+    expect(result.errors).not_to be_empty
     expect(Screening.count).to eq(8)
     expect(SyncRun.last.partially_failed?).to be(true)
   end
