@@ -27,7 +27,7 @@ class ProgrammeSyncJob < ApplicationJob
           end
         end
       else
-        ProgrammeSync::Result.new(status: "skipped", sync_run_id: nil, fetched: 0, created: 0, updated: 0, unchanged: 0, skipped: 0, failed: 0, errors: ["another sync run is in progress"])
+        ProgrammeSync::Result.new(status: "skipped", sync_run_id: nil, fetched: 0, created: 0, updated: 0, unchanged: 0, skipped: 0, failed: 0, errors: [ "another sync run is in progress" ])
       end
 
     if result.status == "failed" && result.fetched.zero?
@@ -37,6 +37,3 @@ class ProgrammeSyncJob < ApplicationJob
     result
   end
 end
-
-SyncProgrammeJob = ProgrammeSyncJob
-ProgrammeSyncWorker = ProgrammeSyncJob

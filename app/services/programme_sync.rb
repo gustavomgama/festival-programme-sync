@@ -83,7 +83,7 @@ class ProgrammeSync
           break
         end
 
-        total_pages = [payload.fetch("total_pages", 1).to_i, 1].max
+        total_pages = [ payload.fetch("total_pages", 1).to_i, 1 ].max
 
         screenings.each do |record|
           counters[:fetched] += 1
@@ -267,10 +267,4 @@ class ProgrammeSync
       screening_unchanged: screening_created ? false : !screening_changed
     }
   end
-
-  def swallow_unexpected? = false
 end
-
-ProgrammeSyncService = ProgrammeSync
-FestivalProgrammeSync = ProgrammeSync
-SyncProgrammeService = ProgrammeSync
