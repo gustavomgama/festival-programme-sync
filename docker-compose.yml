@@ -14,6 +14,7 @@ x-app: &app
     DATABASE_PASSWORD: postgres
     REDIS_URL: redis://redis:6379/0
     FESTIVAL_API_URL: http://web:3000
+    RAILS_DEVELOPMENT_HOSTS: web
   depends_on:
     db:
       condition: service_healthy
