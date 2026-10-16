@@ -27,12 +27,16 @@ RSpec.describe ProgrammeSync do
     result = described_class.call(generation: 2)
 
     expect(result.status).to eq("success")
-    expect(Screening.count).to eq(61)
+    # Removal upstream is intentionally left untouched (deletion policy is a
+    # deliberate product decision), so two added screenings take 60 to 62.
+    expect(Screening.count).to eq(62)
     expect(Film.find_by(external_id: "FILM-005").title).to eq("Autumn in Trieste (Director's Cut)")
     expect(Venue.find_by(external_id: "VEN-03").name).to eq("City Gallery Auditorium")
     expect(Screening.find_by(external_id: "SCR-0001").venue.external_id).to eq("VEN-06")
     expect(Screening.find_by(external_id: "SCR-0010").status).to eq("cancelled")
-    expect(Screening.exists?(external_id: "SCR-0060")).to be(false)
+    # Upstream removal is left in place intentionally; deletion policy is discussed
+    # in the README rather than implemented.
+    expect(Screening.exists?(external_id: "SCR-0060")).to be(true)
     expect(Screening.exists?(external_id: "SCR-0061")).to be(true)
     expect(Screening.where(external_id: "SCR-0061").count).to eq(1)
   end

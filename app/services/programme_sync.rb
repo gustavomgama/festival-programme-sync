@@ -1,4 +1,5 @@
 require "faraday"
+require "rack/mock"
 
 class ProgrammeSync
   class FailedError < StandardError; end
@@ -144,25 +145,36 @@ class ProgrammeSync
 
   private
 
+  ApiResponse = Struct.new(:status, :body) do
+    def success?
+      status.to_i < 400
+    end
+  end
+
   def fetch_page(page)
     params = { page: page, generation: @generation }
     params[:fail_after] = @fail_after unless @fail_after.nil?
     params[:slow] = true if @slow
-    connection.get("/mock_api/screenings", params)
+
+    if local_app?
+      query = params.to_query
+      path = "/mock_api/screenings#{query.present? ? "?#{query}" : ""}"
+      environment = Rack::MockRequest.env_for(path, method: "GET")
+      status, _headers, body_parts = Rails.application.call(environment)
+      body = Array(body_parts).join
+      body_parts.close if body_parts.respond_to?(:close)
+      ApiResponse.new(status, body)
+    else
+      conn = Faraday.new(url: @base_url) do |faraday|
+        faraday.options.timeout = 15
+        faraday.options.open_timeout = 15
+        faraday.adapter Faraday.default_adapter
+      end
+      response = conn.get("/mock_api/screenings", params)
+      ApiResponse.new(response.status, response.body)
+    end
   rescue Faraday::Error => e
     raise
-  end
-
-  def connection
-    Faraday.new(url: @base_url) do |conn|
-      conn.options.timeout = 15
-      conn.options.open_timeout = 15
-      if local_app?
-        conn.adapter :rack, Rails.application
-      else
-        conn.adapter Faraday.default_adapter
-      end
-    end
   end
 
   def local_app?
@@ -225,4 +237,3 @@ end
 ProgrammeSyncService = ProgrammeSync
 FestivalProgrammeSync = ProgrammeSync
 SyncProgrammeService = ProgrammeSync
-RUBY
