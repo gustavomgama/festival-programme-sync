@@ -39,6 +39,29 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_01_120004) do
     t.index ["venue_id"], name: "index_screenings_on_venue_id"
   end
 
+  create_table "sync_runs", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.text "error_details"
+    t.text "error_summary"
+    t.integer "films_created", default: 0, null: false
+    t.integer "films_updated", default: 0, null: false
+    t.datetime "finished_at"
+    t.integer "generation"
+    t.integer "records_created", default: 0, null: false
+    t.integer "records_failed", default: 0, null: false
+    t.integer "records_fetched", default: 0, null: false
+    t.integer "records_updated", default: 0, null: false
+    t.integer "screenings_created", default: 0, null: false
+    t.integer "screenings_updated", default: 0, null: false
+    t.datetime "started_at"
+    t.string "status", default: "running", null: false
+    t.datetime "updated_at", null: false
+    t.integer "venues_created", default: 0, null: false
+    t.integer "venues_updated", default: 0, null: false
+    t.index ["started_at"], name: "index_sync_runs_on_started_at"
+    t.index ["status"], name: "index_sync_runs_on_status"
+  end
+
   create_table "venues", force: :cascade do |t|
     t.string "address"
     t.integer "capacity"
@@ -51,27 +74,4 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_01_120004) do
 
   add_foreign_key "screenings", "films"
   add_foreign_key "screenings", "venues"
-
-  create_table "sync_runs", force: :cascade do |t|
-    t.integer "generation"
-    t.string "status", default: "running", null: false
-    t.datetime "started_at"
-    t.datetime "finished_at"
-    t.integer "records_fetched", default: 0, null: false
-    t.integer "records_created", default: 0, null: false
-    t.integer "records_updated", default: 0, null: false
-    t.integer "records_failed", default: 0, null: false
-    t.integer "films_created", default: 0, null: false
-    t.integer "films_updated", default: 0, null: false
-    t.integer "venues_created", default: 0, null: false
-    t.integer "venues_updated", default: 0, null: false
-    t.integer "screenings_created", default: 0, null: false
-    t.integer "screenings_updated", default: 0, null: false
-    t.text "error_summary"
-    t.text "error_details"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["started_at"], name: "index_sync_runs_on_started_at"
-    t.index ["status"], name: "index_sync_runs_on_status"
-  end
 end
