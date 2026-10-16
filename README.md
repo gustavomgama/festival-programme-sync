@@ -51,7 +51,10 @@ The suite uses PostgreSQL and passes all examples.
 - Upstream external IDs are stable across generations (as documented by the mock).
 - Upstream-deleted screenings are left in place; a soft-delete would be safer in a
   production system, but deletion is not required by the brief.
-- Overlap is guarded by the presence of stale `running` SyncRun rows. This is simple
-  and idempotent, not a hard lock.
+- Overlap handling combines a `SyncRun.running` pre-check with a Redis execution lock
+  and remains idempotent because upserts use external IDs.
+- Hourly scheduling is configured with Sidekiq Cron in the Sidekiq server process;
+  a full hourly sync is a poor fit for festival week, where event-driven deltas
+  would be better if the upstream API supports them.
 - Hourly full syncs are a poor fit for festival week; event-driven delta updates
   would be better if the upstream API supports them.
