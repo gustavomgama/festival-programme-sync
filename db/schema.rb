@@ -1,5 +1,17 @@
+# This file is auto-generated from the current state of the database. Instead
+# of editing this file, please use the migrations feature of Active Record to
+# incrementally modify your database, and then regenerate this schema definition.
+#
+# This file is the source Rails uses to define your schema when running `bin/rails
+# db:schema:load`. When creating a new database, `bin/rails db:schema:load` tends to
+# be faster and is potentially less error prone than running all of your
+# migrations from scratch. Old migrations may fail to apply correctly if those
+# migrations use external dependencies or application code.
+#
+# It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_01_120004) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_03_120005) do
+  # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
   create_table "films", force: :cascade do |t|
@@ -32,19 +44,24 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_01_120004) do
     t.text "error_details"
     t.text "error_summary"
     t.integer "films_created", default: 0, null: false
+    t.integer "films_unchanged", default: 0, null: false
     t.integer "films_updated", default: 0, null: false
     t.datetime "finished_at"
     t.integer "generation"
     t.integer "records_created", default: 0, null: false
     t.integer "records_failed", default: 0, null: false
     t.integer "records_fetched", default: 0, null: false
+    t.integer "records_skipped", default: 0, null: false
+    t.integer "records_unchanged", default: 0, null: false
     t.integer "records_updated", default: 0, null: false
     t.integer "screenings_created", default: 0, null: false
+    t.integer "screenings_unchanged", default: 0, null: false
     t.integer "screenings_updated", default: 0, null: false
     t.datetime "started_at"
     t.string "status", default: "running", null: false
     t.datetime "updated_at", null: false
     t.integer "venues_created", default: 0, null: false
+    t.integer "venues_unchanged", default: 0, null: false
     t.integer "venues_updated", default: 0, null: false
     t.index ["started_at"], name: "index_sync_runs_on_started_at"
     t.index ["status"], name: "index_sync_runs_on_status"

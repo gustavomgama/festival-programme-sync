@@ -5,7 +5,7 @@ class ProgrammeSync
   class FailedError < StandardError; end
 
   Result = Struct.new(
-    :status, :sync_run_id, :fetched, :created, :updated, :failed, :errors, keyword_init: true
+    :status, :sync_run_id, :fetched, :created, :updated, :unchanged, :skipped, :failed, :errors, keyword_init: true
   )
 
   def self.call(...) = new(...).call
@@ -28,7 +28,7 @@ class ProgrammeSync
 
   def call
     if @sync_run_input.nil? && SyncRun.exists?(status: "running", started_at: @concurrency_timeout.ago..)
-      return Result.new(status: "skipped", sync_run_id: nil, fetched: 0, created: 0, updated: 0, failed: 0, errors: [])
+      return Result.new(status: "skipped", sync_run_id: nil, fetched: 0, created: 0, updated: 0, unchanged: 0, skipped: 0, failed: 0, errors: [])
     end
 
     @sync_run = @sync_run_input || SyncRun.create!(
@@ -44,13 +44,17 @@ class ProgrammeSync
       fetched: 0,
       created: 0,
       updated: 0,
+      unchanged: 0,
       failed: 0,
       films_created: 0,
       films_updated: 0,
+      films_unchanged: 0,
       venues_created: 0,
       venues_updated: 0,
+      venues_unchanged: 0,
       screenings_created: 0,
-      screenings_updated: 0
+      screenings_updated: 0,
+      screenings_unchanged: 0
     }
     errors = []
 
@@ -87,12 +91,16 @@ class ProgrammeSync
             counts = upsert_record(record)
             counters[:created] += counts[:created]
             counters[:updated] += counts[:updated]
+            counters[:unchanged] += counts[:unchanged]
             counters[:films_created] += counts[:film_created] ? 1 : 0
             counters[:films_updated] += counts[:film_updated] ? 1 : 0
+            counters[:films_unchanged] += counts[:film_unchanged] ? 1 : 0
             counters[:venues_created] += counts[:venue_created] ? 1 : 0
             counters[:venues_updated] += counts[:venue_updated] ? 1 : 0
+            counters[:venues_unchanged] += counts[:venue_unchanged] ? 1 : 0
             counters[:screenings_created] += counts[:screening_created] ? 1 : 0
             counters[:screenings_updated] += counts[:screening_updated] ? 1 : 0
+            counters[:screenings_unchanged] += counts[:screening_unchanged] ? 1 : 0
           rescue => e
             counters[:failed] += 1
             errors << "screening #{record.is_a?(Hash) ? record['id'] : record.inspect}: #{e.class}: #{e.message}"
@@ -108,7 +116,7 @@ class ProgrammeSync
       errors << "#{e.class}: #{e.message}"
     end
 
-    Rails.logger.info("programme_sync.finished sync_run_id=#{@sync_run.id} status=#{errors.empty? ? "success" : (counters[:fetched].positive? ? "partial_failure" : "failed")} fetched=#{counters[:fetched]} created=#{counters[:created]} updated=#{counters[:updated]} failed=#{counters[:failed]}")
+    Rails.logger.info("programme_sync.finished sync_run_id=#{@sync_run.id} status=#{errors.empty? ? "success" : (counters[:fetched].positive? ? "partial_failure" : "failed")} fetched=#{counters[:fetched]} created=#{counters[:created]} updated=#{counters[:updated]} unchanged=#{counters[:unchanged]} failed=#{counters[:failed]}")
 
     status =
       if errors.empty?
@@ -125,13 +133,18 @@ class ProgrammeSync
       records_fetched: counters[:fetched],
       records_created: counters[:created],
       records_updated: counters[:updated],
+      records_unchanged: counters[:unchanged],
+      records_skipped: counters[:unchanged],
       records_failed: counters[:failed],
       films_created: counters[:films_created],
       films_updated: counters[:films_updated],
+      films_unchanged: counters[:films_unchanged],
       venues_created: counters[:venues_created],
       venues_updated: counters[:venues_updated],
+      venues_unchanged: counters[:venues_unchanged],
       screenings_created: counters[:screenings_created],
       screenings_updated: counters[:screenings_updated],
+      screenings_unchanged: counters[:screenings_unchanged],
       error_summary: errors.first,
       error_details: errors.to_json
     )
@@ -142,6 +155,8 @@ class ProgrammeSync
       fetched: counters[:fetched],
       created: counters[:created],
       updated: counters[:updated],
+      unchanged: counters[:unchanged],
+      skipped: counters[:unchanged],
       failed: counters[:failed],
       errors: errors
     )
@@ -196,42 +211,60 @@ class ProgrammeSync
 
     film = Film.find_or_initialize_by(external_id: film_payload.fetch("id"))
     film_created = film.new_record?
+    film_changed = film_created ||
+      film.title != film_payload["title"] ||
+      film.synopsis != film_payload["synopsis"] ||
+      film.runtime != film_payload["runtime"] ||
+      film.year != film_payload["year"]
     film.assign_attributes(
       title: film_payload["title"],
       synopsis: film_payload["synopsis"],
       runtime: film_payload["runtime"],
       year: film_payload["year"]
     )
-    film.save!
+    film.save! if film_changed
 
     venue = Venue.find_or_initialize_by(external_id: venue_payload.fetch("id"))
     venue_created = venue.new_record?
+    venue_changed = venue_created ||
+      venue.name != venue_payload["name"] ||
+      venue.address != venue_payload["address"] ||
+      venue.capacity != venue_payload["capacity"]
     venue.assign_attributes(
       name: venue_payload["name"],
       address: venue_payload["address"],
       capacity: venue_payload["capacity"]
     )
-    venue.save!
+    venue.save! if venue_changed
 
     screening = Screening.find_or_initialize_by(external_id: record.fetch("id"))
     screening_created = screening.new_record?
+    screening_changed = screening_created ||
+      screening.film_id != film.id ||
+      screening.venue_id != venue.id ||
+      screening.starts_at != Time.parse(record.fetch("starts_at")) ||
+      screening.status != record.fetch("status", "scheduled")
     screening.assign_attributes(
       film: film,
       venue: venue,
       starts_at: record.fetch("starts_at"),
       status: record.fetch("status", "scheduled")
     )
-    screening.save!
+    screening.save! if screening_changed
 
     {
       created: screening_created ? 1 : 0,
-      updated: screening_created ? 0 : 1,
+      updated: (screening_created || !screening_changed) ? 0 : 1,
+      unchanged: screening_created ? 0 : (screening_changed ? 0 : 1),
       film_created: film_created,
-      film_updated: !film_created,
+      film_updated: (film_created || !film_changed) ? false : true,
+      film_unchanged: film_created ? false : !film_changed,
       venue_created: venue_created,
-      venue_updated: !venue_created,
+      venue_updated: (venue_created || !venue_changed) ? false : true,
+      venue_unchanged: venue_created ? false : !venue_changed,
       screening_created: screening_created,
-      screening_updated: !screening_created
+      screening_updated: (screening_created || !screening_changed) ? false : true,
+      screening_unchanged: screening_created ? false : !screening_changed
     }
   end
 
