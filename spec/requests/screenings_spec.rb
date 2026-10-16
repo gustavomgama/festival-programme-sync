@@ -2,6 +2,10 @@ require "rails_helper"
 
 RSpec.describe "Screenings", type: :request do
   before do
+    Screening.delete_all
+    Venue.delete_all
+    Film.delete_all
+    SyncRun.delete_all
     ProgrammeSync.call(generation: 1)
   end
 

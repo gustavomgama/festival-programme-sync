@@ -1,6 +1,11 @@
 require "rails_helper"
 
 RSpec.describe Venue do
+  before do
+    Screening.delete_all
+    Venue.delete_all
+  end
+
   it "requires an external id and name" do
     expect(build(:venue, external_id: nil)).not_to be_valid
     expect(build(:venue, name: nil)).not_to be_valid

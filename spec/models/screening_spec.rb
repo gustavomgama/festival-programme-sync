@@ -1,6 +1,12 @@
 require "rails_helper"
 
 RSpec.describe Screening do
+  before do
+    Screening.delete_all
+    Film.delete_all
+    Venue.delete_all
+  end
+
   it "requires an external id, film, venue and start time" do
     expect(build(:screening, external_id: nil)).not_to be_valid
     expect(build(:screening, film: nil)).not_to be_valid

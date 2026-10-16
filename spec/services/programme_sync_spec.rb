@@ -46,4 +46,55 @@ RSpec.describe ProgrammeSync do
     expect(Screening.count).to eq(8)
     expect(SyncRun.last.partially_failed?).to be(true)
   end
+  it "records a skipped run when another sync is already running" do
+    SyncRun.create!(status: "running", started_at: Time.current, generation: 1)
+
+    result = described_class.call(generation: 1)
+
+    expect(result.status).to eq("skipped")
+    expect(result.fetched).to eq(0)
+  end
+
+  it "captures malformed API responses without raising" do
+    sync = described_class.new(generation: 1)
+    allow(sync).to receive(:fetch_page).and_return(described_class::ApiResponse.new(200, "{not json"))
+
+    result = sync.call
+
+    expect(result.status).to eq("failed")
+    expect(result.errors.join).to match(/JSON::ParserError|not a JSON object/)
+    expect(SyncRun.last.status).to eq("failed")
+  end
+
+  it "captures per-record errors and continues importing the rest" do
+    sync = described_class.new(generation: 1)
+    response = described_class::ApiResponse.new(
+      200,
+      {
+        page: 1,
+        total_pages: 1,
+        screenings: [
+          { "id" => "SCR-BAD", "film" => { "id" => "FILM-BAD" }, "venue" => { "id" => "VEN-BAD" }, "starts_at" => "not-a-time", "status" => "scheduled" },
+          mock_api_screening
+        ]
+      }.to_json
+    )
+    allow(sync).to receive(:fetch_page).and_return(response)
+
+    result = sync.call
+
+    expect(result.failed).to eq(1)
+    expect(result.fetched).to eq(2)
+    expect(result.errors.join).to include("SCR-BAD")
+  end
+
+  def mock_api_screening
+    {
+      "id" => "SCR-OK",
+      "starts_at" => "2027-03-06T16:00:00Z",
+      "status" => "scheduled",
+      "film" => { "id" => "FILM-OK", "title" => "OK Film", "synopsis" => nil, "runtime" => 90, "year" => 2027 },
+      "venue" => { "id" => "VEN-OK", "name" => "OK Venue", "address" => "Addr", "capacity" => 10 }
+    }
+end
 end

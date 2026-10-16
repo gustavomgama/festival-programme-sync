@@ -1,6 +1,11 @@
 require "rails_helper"
 
 RSpec.describe VenueSync do
+  before do
+    Screening.delete_all
+    Venue.delete_all
+  end
+
   describe "#call" do
     it "creates a venue that doesn't exist yet" do
       payload = [
