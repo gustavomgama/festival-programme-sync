@@ -146,3 +146,15 @@ Reference model ~9 tables (organisations, venues, events, sessions, people, user
 ### Before submitting
 - Rename README.md to INSTRUCTIONS.MD
 - Create README.md with contents of how to run the project and relevant information
+
+## Additional recommendations
+- Timebox the work. Reserve time for final testing and cleanup instead of spending the entire window building features.
+- Validate the starting point first. Run the project before making changes so you can distinguish existing issues from problems introduced during development.
+- Make small, logical commits. Commit by feature or correction rather than submitting one large final commit.
+- Write down assumptions. If a requirement is ambiguous, make a reasonable decision and explain it briefly in the README.
+- Avoid unnecessary complexity. A smaller solution with clear responsibilities is preferable to an elaborate architecture that is difficult to explain.
+- Test interruption scenarios. Consider what happens if processing stops midway, the API returns the same data twice, or one record is malformed.
+- Differentiate real updates from unchanged records. Metrics should accurately separate created, updated, skipped, and failed records.
+- Review lock ownership carefully. A worker should never release a lock that now belongs to another process.
+- Perform a clean-clone check. Follow the README exactly in a fresh environment to confirm that another developer can run the application without additional instructions.
+- Be prepared to defend and critique the solution. The candidate should be able to explain the choices made, identify limitations, and describe what they would improve with more time.
