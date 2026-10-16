@@ -1,9 +1,3 @@
-# Seeds the local copy with part of the generation-1 dataset, so the screenings
-# page has something to show before the candidate builds the sync.
-#
-# We deliberately load only the first 20 screenings. Once the real programme sync
-# exists, running it against generation=1 should insert the rest (and be a no-op
-# on a second run); generation=2 should then apply the upstream changes.
 
 sample = MockApi::Dataset.generation_one.first(20)
 

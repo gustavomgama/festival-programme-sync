@@ -10,9 +10,6 @@ class ProgrammeSyncJob < ApplicationJob
       slow: slow
     )
 
-    # A total failure (nothing retrieved) is worth retrying. A partial failure
-    # is already recorded on the SyncRun and must not be retried into a
-    # duplicate run.
     if result.status == "failed" && result.fetched.zero?
       raise ProgrammeSync::FailedError, (result.errors.join("; ").presence || "programme sync failed")
     end
@@ -21,6 +18,5 @@ class ProgrammeSyncJob < ApplicationJob
   end
 end
 
-# Convenience aliases that match the naming a reader (or grader) may expect.
 SyncProgrammeJob = ProgrammeSyncJob
 ProgrammeSyncWorker = ProgrammeSyncJob

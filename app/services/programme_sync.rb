@@ -27,9 +27,6 @@ class ProgrammeSync
   end
 
   def call
-    # Idempotent by design: a second concurrent run is harmless, but skipping
-    # saves work and keeps the run log readable. Stale "running" rows from a
-    # crashed process time out so they can never block future syncs forever.
     if @sync_run_input.nil? && SyncRun.exists?(status: "running", started_at: @concurrency_timeout.ago..)
       return Result.new(status: "skipped", sync_run_id: nil, fetched: 0, created: 0, updated: 0, failed: 0, errors: [])
     end
@@ -105,15 +102,9 @@ class ProgrammeSync
 
         page += 1
         stop = false
-        # Stop early if this page was truncated by fail_after (no next page exists upstream).
-        # The next request is expected to come back as a 500; attempting it only to fail
-        # is harmless, but we break to preserve the partial-failure semantics cleanly.
         break if payload.key?("screenings") && screenings.size < 25 && page > total_pages
       end
     rescue Faraday::Error, JSON::ParserError => e
-      # Dead/unreachable API (or malformed response). We cannot make progress on
-      # this or any later page, so stop here; anything already upserted above is
-      # intact because each page was committed as it arrived.
       errors << "#{e.class}: #{e.message}"
     end
 
@@ -244,8 +235,6 @@ class ProgrammeSync
     }
   end
 
-  # Test hook: keeps unexpected errors from being swallowed in development code
-  # paths where a failure should surface immediately. Defaults to false.
   def swallow_unexpected? = false
 end
 

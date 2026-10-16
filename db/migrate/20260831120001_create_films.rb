@@ -10,7 +10,6 @@ class CreateFilms < ActiveRecord::Migration[8.1]
       t.timestamps
     end
 
-    # The external system's ID is our idempotency key: one local row per upstream film.
     add_index :films, :external_id, unique: true
   end
 end

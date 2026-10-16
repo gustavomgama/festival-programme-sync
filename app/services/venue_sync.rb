@@ -1,12 +1,3 @@
-# Keeps our local venue records in step with the upstream festival system.
-#
-# Inherited from the previous programming integration. Given an array of venue
-# hashes from the API, it upserts each one into our venues table.
-#
-#   VenueSync.new(venues_payload).call
-#
-# where each entry looks like:
-#   { "id" => "VEN-01", "name" => "Grand Cinema", "address" => "...", "capacity" => 320 }
 class VenueSync
   def initialize(venues)
     @venues = venues

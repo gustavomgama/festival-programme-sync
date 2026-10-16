@@ -1,19 +1,4 @@
 module MockApi
-  # The two fixture datasets that sit behind the mock external API.
-  #
-  # Generation 1 is the starting state (60 screenings). Generation 2 is the SAME
-  # upstream data after a batch of edits, and every mutation is chosen to catch a
-  # specific class of sync bug:
-  #
-  #   * 4 screenings move venue        -> proves the sync UPDATES, not just inserts
-  #   * 3 screenings are cancelled      -> proves soft state changes propagate
-  #   * 1 film is retitled (same id)    -> catches find_or_create_by(:title)
-  #   * 1 venue is renamed (same id)    -> catches find_or_create_by(:name)
-  #   * 2 screenings are added          -> proves inserts still work
-  #   * 1 screening is removed          -> exposes whether deletions are handled
-  #
-  # The external identifiers are stable across generations on purpose. If the
-  # retitled film changed id, the single best check in the exercise would break.
   class Dataset
     PER_PAGE = 25
 
@@ -41,14 +26,10 @@ module MockApi
       "VEN-06" => { name: "The Roxy",                      address: "7 Bridge Street",  capacity: 200 }
     }.freeze
 
-    # ---- Generation 2 mutations, keyed by the external id they touch --------
 
-    # Same film id, new title. The classic "matched on the wrong column" trap.
     FILM_OVERRIDES_G2  = { "FILM-005" => { title: "Autumn in Trieste (Director's Cut)" } }.freeze
-    # Same venue id, new name. The trap the shipped VenueSync actually falls into.
     VENUE_OVERRIDES_G2 = { "VEN-03" => { name: "City Gallery Auditorium" } }.freeze
 
-    # screening id => new venue id
     MOVED_VENUES_G2 = {
       "SCR-0001" => "VEN-06",
       "SCR-0002" => "VEN-05",
@@ -64,8 +45,6 @@ module MockApi
       { "id" => "SCR-0062", "film_id" => "FILM-007", "venue_id" => "VEN-04", "starts_at" => "2027-03-21T18:00:00Z", "status" => "scheduled" }
     ].freeze
 
-    # The flat generation-1 screenings, generated deterministically so counts and
-    # ids never drift. 60 screenings across the 12 films and 6 venues.
     BASE_SCREENINGS = (1..60).map do |n|
       film_id  = format("FILM-%03d", ((n - 1) % 12) + 1)
       venue_id = format("VEN-%02d",  ((n - 1) % 6) + 1)
@@ -81,7 +60,6 @@ module MockApi
     end.freeze
 
     class << self
-      # Full, nested records for a generation (no pagination applied).
       def records(generation:)
         generation.to_i == 2 ? generation_two : generation_one
       end
@@ -106,7 +84,6 @@ module MockApi
 
       private
 
-      # Turn a flat screening into the nested shape the API returns.
       def build_record(flat, film_overrides: {}, venue_overrides: {})
         {
           "id"        => flat["id"],

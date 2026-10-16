@@ -6,7 +6,6 @@ abort("The Rails environment is running in production mode!") if Rails.env.produ
 
 require "rspec/rails"
 
-# Load support files (shared examples, helpers, etc.)
 Dir[Rails.root.join("spec/support/**/*.rb")].sort.each { |f| require f }
 
 begin
@@ -21,6 +20,5 @@ RSpec.configure do |config|
   config.infer_spec_type_from_file_location!
   config.filter_rails_from_backtrace!
 
-  # `create`, `build`, etc. without the FactoryBot:: prefix.
   config.include FactoryBot::Syntax::Methods
 end
