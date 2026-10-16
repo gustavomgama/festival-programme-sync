@@ -8,3 +8,10 @@
  *
  * Consider organizing styles into separate files for maintainability.
  */
+
+turbo-frame[aria-busy="true"] {
+  opacity: 0.65;
+  filter: blur(0.5px);
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
