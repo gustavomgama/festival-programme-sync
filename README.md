@@ -3,58 +3,59 @@
 Rails 8 app that syncs film festival screenings from a mock external API and
 renders a filtered screenings list.
 
-## Docker (challenge-provided)
+## Run with Docker
 
 ```bash
 docker compose up --build
 ```
 
 - App: http://localhost:3000
-- Sidekiq dashboard: http://localhost:3000/sidekiq
-- Postgres on host port 5544
+- Sidekiq: http://localhost:3000/sidekiq
+- Postgres: localhost:5544
+- Redis: localhost:6380
 
-## Local run (commands tested in this environment)
+## Run locally
+
+Requires Ruby 3.3, PostgreSQL 16 and Redis 6+.
 
 ```bash
-export DATABASE_HOST=localhost DATABASE_PORT=5544 DATABASE_USER=postgres DATABASE_PASSWORD=postgres
-
+export DATABASE_HOST=127.0.0.1 DATABASE_PORT=5432 DATABASE_USER=postgres DATABASE_PASSWORD=postgres
+bundle install
 bundle exec rails db:prepare
 bundle exec rails tailwindcss:build
 bundle exec rails server -p 3000
 ```
 
-- App: http://localhost:3000
+Sidekiq is optional: `bundle exec sidekiq`.
 
-Redis is needed only for Sidekiq or queueing/enqueuing jobs (`REDIS_URL` defaults to `redis://localhost:6379/0`).
-
-## Tests (tested)
+## Tests
 
 ```bash
-export DATABASE_HOST=localhost DATABASE_PORT=5544 DATABASE_USER=postgres DATABASE_PASSWORD=postgres
 bundle exec rspec
 ```
 
-The suite uses PostgreSQL and passes all examples.
+## Environment
 
-## What I changed
+- `FESTIVAL_API_URL` (default `http://localhost:3000`)
+- `REDIS_URL` (default `redis://localhost:6379/0`)
+- `DATABASE_HOST`, `DATABASE_PORT`, `DATABASE_USER`, `DATABASE_PASSWORD`
 
-- `ProgrammeSync` imports `/mock_api/screenings` page by page, upserts Film, Venue and
-  Screening by `external_id`, and commits each page before fetching the next one. It
+## What changed
+
+- `ProgrammeSync` imports `/mock_api/screenings` page by page, upserts `Film`,
+  `Venue` and `Screening` by `external_id`, commits each page separately, and
   records status, counts and errors in `sync_runs`.
 - `ScreeningsController` eager-loads film/venue and applies date, venue and `q`
   filters. The form targets the `screenings` Turbo Frame.
-- Left the planted `VenueSync` trap untouched as evidence; the new sync never matches
-  venues by name and does not abort a whole batch on one bad record.
+- The planted `VenueSync` trap is left untouched; the new sync never matches
+  venues by name and does not abort a whole run on one bad record.
 
 ## Assumptions and trade-offs
 
-- Upstream external IDs are stable across generations (as documented by the mock).
-- Upstream-deleted screenings are left in place; a soft-delete would be safer in a
-  production system, but deletion is not required by the brief.
-- Overlap handling combines a `SyncRun.running` pre-check with a Redis execution lock
-  and remains idempotent because upserts use external IDs.
-- Hourly scheduling is configured with Sidekiq Cron in the Sidekiq server process;
-  a full hourly sync is a poor fit for festival week, where event-driven deltas
-  would be better if the upstream API supports them.
-- Hourly full syncs are a poor fit for festival week; event-driven delta updates
-  would be better if the upstream API supports them.
+- Upstream external IDs are stable across generations.
+- Upstream-deleted screenings are left in place; soft delete would be safer in
+  production but is not required by the brief.
+- Overlap safety combines a running-`SyncRun` check with a Redis execution lock;
+  upserts by external ID keep retries idempotent.
+- A full hourly sync is a poor fit for festival week; event-driven deltas would
+  be better if the upstream API supports them.
